@@ -65,7 +65,7 @@ star = star.apply(pd.to_numeric, errors='coerce')
 
 """ row-wise removal based on certain column """
 
-# spotify = spotify.drop(spotify[popularity].isna().index)
+# spotify = spotify.dropna(subset=['Popularity'])
 
 # star = star.drop(star[0].isna().index) # user removal based on whether that user rated a song
 
