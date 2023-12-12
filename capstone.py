@@ -420,3 +420,27 @@ rmse_lasso = np.sqrt(mean_squared_error(output_test, output_pred_lasso)) # 21.06
 # statistic, pvalue = stats.f_oneway(question2_df[question2_df['Explicity']==True]['Popularity'], 
 #                               question2_df[question2_df['Explicity'] == False]['Popularity'])
 
+
+#%%
+
+"""
+9) In recommender systems, the popularity based model is an important baseline. We have a 
+two part question in this regard: a) Is there a relationship between popularity and average 
+star rating for the 5k songs we have explicit feedback for? b) Which 10 songs are in 
+the “greatest hits” (out of the 5k songs), on the basis of the popularity based model?
+"""
+######## Part A 
+
+# find the average star rating for the 5k songs
+explicit = spotify['explicit'].head(5000) # since the star data only has ratings of the first 5k song
+popularity = spotify['popularity'].head(5000)
+question2_df = pd.DataFrame({'Popularity': popularity, 'Explicity': explicit})
+question2_df = question2_df.dropna() # row-wise removal
+
+# linear regression
+
+
+
+
+
+
