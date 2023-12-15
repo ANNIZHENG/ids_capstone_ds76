@@ -432,13 +432,41 @@ the “greatest hits” (out of the 5k songs), on the basis of the popularity ba
 ######## Part A 
 
 # find the average star rating for the 5k songs
-explicit = spotify['explicit'].head(5000) # since the star data only has ratings of the first 5k song
+star_rating = star.mean(axis=0) # song 0 = 3.196
+
+# find the popularity of the first 5k songs
 popularity = spotify['popularity'].head(5000)
-question2_df = pd.DataFrame({'Popularity': popularity, 'Explicity': explicit})
-question2_df = question2_df.dropna() # row-wise removal
 
 # linear regression
+y = np.asarray(star_rating).reshape(-1,1)
+x = np.asarray(popularity).reshape(-1,1)
 
+reg = LinearRegression()
+reg.fit(x, y)
+coefficient = reg.coef_
+r2 = reg.score(x, y) #0.324
+
+#Yes, there is a relationship between popularity and average star rating, with an R2 of 
+#0.324, meaning that the popularity of a song explains 32.4% of the variation in the star rating
+
+#plot
+plt.scatter(x, y)
+plt.xlabel('Popularity')
+plt.ylabel('Rating')
+plt.title('Scatter Plot of Popularity and Rating')
+plt.show()
+
+######### Part B
+
+# find the 10 most popular songs - these are the "greatest hits"
+top10 = popularity.sort_values(ascending=False).head(10)
+
+"""
+10) You want to create a “personal mixtape” for all 10k users we have explicit feedback for. 
+    This mixtape contains individualized recommendations as to which 10 songs (out of the 5k) 
+    a given user will enjoy most. How do these recommendations compare to the “greatest hits” 
+    from the previous question and how good is your recommender system in making recommendations?
+"""
 
 
 
