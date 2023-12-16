@@ -467,8 +467,49 @@ top10 = popularity.sort_values(ascending=False).head(10)
     a given user will enjoy most. How do these recommendations compare to the “greatest hits” 
     from the previous question and how good is your recommender system in making recommendations?
 """
+rseed = 18412460
 
+from surprise import Dataset, Reader
+from surprise import SVD  # Example algorithm, you can choose different algorithms provided by Surprise
+from surprise.model_selection import cross_validate, train_test_split
 
+# Assuming your data is loaded into a variable named 'data' in the required format
 
+new_star = star.reset_index()
 
+melted_data = new_star.melt(id_vars='index', var_name='song_id', value_name='rating')
+
+#melted_data1 = new_star.melt(id_vars='index', var_name='song_id', value_name='rating')
+
+# Create a reader object specifying the rating scale
+reader = Reader(rating_scale=(1, 5))
+
+# Load the data into Surprise's Dataset object
+melted_data = Dataset.load_from_df(melted_data[['index', 'song_id', 'rating']], reader)
+
+# Split the data into train and test sets
+trainset, testset = train_test_split(melted_data, test_size=0.2,random_state=rseed)  # You can adjust the test_size
+
+# Choose an algorithm (SVD as an example)
+algorithm = SVD()
+
+# Train the algorithm on the training set
+algorithm.fit(trainset)
+
+# Predict ratings for the test set
+predictions = algorithm.test(testset)
+
+# Example: Get top N recommendations for a user
+# Replace 'user_id' with the actual user ID
+index = '1'  # Example user ID
+n_recommendations = 10  # Number of recommendations to get
+user_items = melted_data.build_full_trainset().ur[index]  # Get the items the user has rated
+user_unseen_items = [item for item in trainset.all_items() if item not in user_items]
+user_unseen_ratings = [algorithm.predict(index, item).est for item in user_unseen_items]
+top_n = sorted(zip(user_unseen_items, user_unseen_ratings), key=lambda x: x[1], reverse=True)[:n_recommendations]
+
+# 'top_n' contains the top N recommendations for the user with predicted ratings
+print(top_n)
+
+predictions[:5]
 
