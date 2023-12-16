@@ -16,7 +16,39 @@ from sklearn.linear_model import Lasso
 
 alpha = 0.05
 
+seed = 18412460
+np.random.seed(seed)
 
+#packages I used, maybe some duplicatd packages
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.pipeline import Pipeline
+sns.set()
+import warnings
+warnings.filterwarnings('ignore')
+
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, LabelBinarizer
+from sklearn.preprocessing import StandardScaler
+
+from sklearn.decomposition import PCA
+from sklearn import cluster, metrics
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples, silhouette_score
+
+from sklearn.linear_model  import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import tree
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, roc_auc_score, classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.tree import DecisionTreeClassifier
+
+from sklearn.linear_model import Perceptron
+import torch
+import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
+from IPython import display
 # In[2]:
 
 
@@ -422,6 +454,268 @@ rmse_lasso = np.sqrt(mean_squared_error(output_test, output_pred_lasso)) # 21.06
 
 
 #%%
+
+"""
+6) When considering the 10 song features in the previous question, how many meaningful principal 
+components can you extract? What proportion of the variance do these principal components account for? 
+Using these principal components, how many clusters can you identify? Do these clusters reasonably 
+correspond to the genre labels in column 20 of the data?
+"""
+#there's in total 52 genres
+print(len(spotify['track_genre'].unique()))
+
+#preprocessing the data, standarization
+ten_features = spotify.iloc[:, 7:17]
+scalar = StandardScaler()
+df_scaled = pd.DataFrame(scalar.fit_transform(ten_features), columns=ten_features.columns)
+
+pca = PCA()
+df_pca = pca.fit_transform(df_scaled)
+y = spotify.iloc[:, 19]
+
+'''6.1)'''
+#identified 4 principal components, juding by those with eigenvalues greater than 1
+plt.figure(figsize=(10, 8))
+threshold = 1
+pd.DataFrame(pca.explained_variance_).plot.bar(color='gray')
+plt.legend('')
+plt.axhline(y = threshold, color = 'orange')
+plt.xlabel('Principal component')
+plt.ylabel('Eigenvalue')
+plt.title('Explained Variance of Each Components')
+plt.show()
+
+"""6.2)"""
+eigVals = pca.explained_variance_
+covarExplained = eigVals/sum(eigVals)*100
+print("Variance explained by the 4 PCs above is: %.3f " % (sum(covarExplained[:4]))) #67.341 
+
+"""6.3) We use the identified 4 components as the new data to find the cluster, which only found 3"""
+pca = PCA(n_components=4)
+df_pca = pca.fit_transform(df_scaled)
+
+Q = []
+for k in range(2, 53):
+    kmeans = cluster.KMeans(k, n_init='auto')
+    labels = kmeans.fit_predict(df_pca)
+    Q.append(silhouette_score(df_pca, labels))
+    print(f'When k = {k}:, the silhouette score is {silhouette_score(df_pca, labels):.3f}') #highest when k=3:0.360
+
+#a graph showing the change of the silhouette when we tried to identify 52 clusters
+plt.plot(np.linspace(2,52,51),Q)
+plt.xlabel('Number of clusters')
+plt.ylabel('Sum of silhouette scores')
+plt.title('Silhouette scores of all clusters')
+plt.show()
+
+
+"""6.4) Obvisouly not, we only identified 3 clusters with the transformed data"""
+kmeans = KMeans(n_clusters=3)
+kmeans = kmeans.fit(df_pca)
+labels = kmeans.predict(df_pca)
+centers = kmeans.cluster_centers_
+plt.title('K-Means Clustering with n_clusters={}'.format(3))
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.scatter(df_pca[:, 0], df_pca[:, 1], c=labels, cmap='Set2')
+plt.plot(centers[:, 0], centers[:, 1], '*',markersize=10,color='red')
+
+"""
+7) Can you predict whether a song is in major or minor key from valence using logistic regression
+ or a support vector machine? If so, how good is this prediction? If not, is there a better one?
+"""
+"""7.1) We use a logistic regression for classification"""
+#first we preprocess the data by checking null values and standardize them. Then split to avoid overfitting
+data = spotify[['valence', 'mode']]
+data.isna().sum()
+x = data['valence'].values
+y = data['mode'].values
+scaler = StandardScaler()
+x = scaler.fit_transform(x.reshape(-1,1))
+
+X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=seed)
+
+#we do a logistic regression and check its performance using confusion matrix and auc score
+model = LogisticRegression()
+model.fit(X_train, y_train)
+pred = model.predict(X_test)
+
+print("Accuracy = {:0.1f}%".format(metrics.accuracy_score(y_test, pred)  * 100))
+
+print("Confusion matrix: ")
+print(metrics.confusion_matrix(y_test, pred))
+
+print("Precision = {:0.1f}%".format(100 * metrics.precision_score(y_test, pred)))
+
+print("Recall = {:0.1f}%".format(100 * metrics.recall_score(y_test, pred)))
+print('-----------------------------------------')
+
+
+"""7.2) The prediction is not good, too close to 0.5"""
+#the graph shows the result is not ideal as the area under the curve is too small, indicating poor classification
+pred_probs = model.predict_proba(X_test)
+metrics.RocCurveDisplay.from_predictions(
+        y_test, pred_probs[:,1],
+        color="darkorange",
+    )
+ROC_AUC = roc_auc_score(y_test,pred)
+plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--',label='ROC curve (area = %0.2f)' % ROC_AUC)
+plt.axis("square")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC curves")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+"""7.3) We explore the performance using more advanced model, such as decision tree, 
+outperforms logistic regression."""
+# Decision Tree
+tree_model = DecisionTreeClassifier(random_state=seed).fit(X_train, y_train)
+tree_predictions = tree_model.predict(X_test)
+# Output some metrics
+tree_auc_roc = roc_auc_score(y_test, tree_predictions)
+tree_classification_report = classification_report(y_test, tree_predictions)
+print(tree_classification_report)
+
+pred_probs = tree_model.predict_proba(X_test)
+metrics.RocCurveDisplay.from_predictions(
+        y_test, pred_probs[:,1],
+        color="darkorange",
+    )
+plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+plt.axis("square")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC curves of Decision Tree")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+"""
+8) Can you predict genre by using the 10 song features from question 4 directly or the principal
+ components you extracted in question 6 with a neural network? How well does this work?
+"""
+"""8.1)We use the 10 song features"""
+#preprocess the data and encode the target variable
+ten_features = spotify.iloc[:, 7:17]
+scalar = StandardScaler()
+x = pd.DataFrame(scalar.fit_transform(ten_features), columns=ten_features.columns)
+
+labels = spotify['track_genre'].unique()
+encoder = LabelEncoder()
+encoder.fit(labels)
+
+encoded_labels = encoder.transform(labels)
+for i, k in zip(labels, encoded_labels):
+    print(f'{i}:{k}')
+y = encoder.fit_transform(spotify['track_genre'])
+
+X_tensor = torch.from_numpy(x.values)
+X_tensor = X_tensor.type(torch.FloatTensor)
+y_tensor = torch.from_numpy(y)
+y_tensor = y_tensor.type(torch.LongTensor)
+
+data = TensorDataset(X_tensor, y_tensor)
+
+train_size = int(len(data)*0.8)
+test_size = len(data)-train_size
+train_data, test_data = random_split(data, [train_size, test_size])
+
+train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+
+#building the model and setting the metrics
+torch.manual_seed(seed)
+N = 1000  # num_samples_per_class
+D = x.shape[1]  # dimensions
+C = 52  # num_classes
+H = 100  # num_hidden_units
+batch_size = 32
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+learning_rate = 0.001
+lambda_l2 = 1e-3
+
+model_deep = nn.Sequential(
+    nn.Linear(D, H),
+    nn.Linear(H,H),
+    nn.Linear(H, C)
+)
+print(model_deep)
+
+def auc_score(model):    
+    y_pred = model(X_test)
+    y_pred_proba = torch.sigmoid(y_pred)
+    row_sums = torch.sum(y_pred_proba, 1)
+    y_pred_proba = torch.div(y_pred_proba, row_sums.unsqueeze(1)) 
+    auc = roc_auc_score(y_test, y_pred_proba.detach(),multi_class='ovr')
+    return auc
+
+def train_val(model):
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=lambda_l2) 
+
+    train_loss = []
+    val_loss = []
+
+    for epoch in range(H):
+        model.train()
+        running_loss = 0
+        train_acc = 0
+        for X_batch, y_batch in train_loader:
+            y_pred = model(X_batch)
+            
+            optimizer.zero_grad()
+            loss = criterion(y_pred, y_batch)
+            score, predicted = torch.max(y_pred, 1)
+            acc = (y_batch == predicted).sum().float()/batch_size
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item()*X_batch.size(0)                 
+        epoch_loss = running_loss/len(train_loader.dataset)
+        train_loss.append(epoch_loss)
+
+        model.eval()
+        running_loss = 0
+        with torch.no_grad():
+            for X_batch, y_batch in test_loader:
+                y_pred = model(X_batch)
+                loss = criterion(y_pred, y_batch)
+                running_loss += loss.item()*X_batch.size(0)
+        epoch_loss = running_loss/len(test_loader.dataset)
+        val_loss.append(epoch_loss)
+        
+        if (epoch+1) % 10 == 0:
+            print(f'[EPOCH]: {epoch}, [TRAIN LOSS]: {train_losses[-1]:.3f}, [VAL LOSS]: {val_losses[-1]:.3f}, [ACCURACY]: {acc:.3f}')
+        #display.clear_output(wait=True)
+        
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_loss, label='Training Loss')
+    plt.plot(val_loss, label='Validation Loss')
+    plt.title('Training and Validation Loss Curves')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()     
+
+
+"""8.2)It performs quite well"""
+X_test = []
+y_test = []
+
+for x, y in test_data:
+    X_test.append(x)
+    y_test.append(y)
+
+X_test = torch.stack(X_test)
+y_test = torch.stack(y_test)
+
+train_val(model_deep) #this also generate a graph for the train and val curves
+auc_score(model_deep) #0.806317016044464
+
+
 
 """
 9) In recommender systems, the popularity based model is an important baseline. We have a 
