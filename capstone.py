@@ -461,6 +461,7 @@ plt.show()
 # find the 10 most popular songs - these are the "greatest hits"
 top10 = popularity.sort_values(ascending=False).head(10)
 
+#%%
 """
 10) You want to create a “personal mixtape” for all 10k users we have explicit feedback for. 
     This mixtape contains individualized recommendations as to which 10 songs (out of the 5k) 
@@ -469,47 +470,93 @@ top10 = popularity.sort_values(ascending=False).head(10)
 """
 rseed = 18412460
 
-from surprise import Dataset, Reader
-from surprise import SVD  # Example algorithm, you can choose different algorithms provided by Surprise
-from surprise.model_selection import cross_validate, train_test_split
+#ministar = star.iloc[:100,:10]
 
-# Assuming your data is loaded into a variable named 'data' in the required format
+ratings_matrix = np.array(star)
+
+# Number of latent factors
+k = 2
+
+# Initialize user and item matrices randomly
+num_users, num_items = ratings_matrix.shape
+user_matrix = np.random.rand(num_users, k)
+item_matrix = np.random.rand(num_items, k)
+
+# Hyperparameters
+learning_rate = 0.01
+num_epochs = 500
+
+batch_size = 100
+num_batches = int(np.ceil(num_users / batch_size))
+
+# Convert NaN to zero for calculations (if needed)
+ratings_matrix_zero = np.nan_to_num(ratings_matrix, nan=0)
+
+for epoch in range(num_epochs):
+    print(f"Epoch: {epoch}")  # Print current epoch number
+    for batch_idx in range(num_batches):
+        print(f"Batch: {batch_idx} in epoch {epoch}")
+        start_idx = batch_idx * batch_size
+        end_idx = min((batch_idx + 1) * batch_size, num_users)
+        batch_users = range(start_idx, end_idx)
+
+        for i in batch_users:
+            print(f"User: {i} in batch {batch_idx} in epoch {epoch}")
+            for j in range(num_items):
+                if not np.isnan(ratings_matrix[i, j]):  # Exclude NaN values for calculations
+                    error = ratings_matrix_zero[i, j] - np.dot(user_matrix[i, :], item_matrix[j, :])
+                    user_gradient = 2 * (error * item_matrix[j, :]) - 0.01 * user_matrix[i, :]
+                    item_gradient = 2 * (error * user_matrix[i, :]) - 0.01 * item_matrix[j, :]
+                    user_matrix[i, :] += learning_rate * user_gradient
+                    item_matrix[j, :] += learning_rate * item_gradient
+
+         
+# Predict ratings using the learned matrices
+predicted_ratings200 = np.dot(user_matrix, item_matrix.T)
+
+# convert to df
+predicted_df = pd.DataFrame(predicted_ratings200)
+
+# find top 10 per user
+top_10_per_user = predicted_df.apply(lambda row: row.nlargest(10).index.tolist(), axis=1)
+
+top_10_per_user = pd.DataFrame(top_10_per_user)
+
+# How does it compare to greatest hits?
+from collections import Counter
+
+most_recommended = Counter(top_10_per_user[0].explode())
+
+most_recommended = pd.DataFrame.from_dict(most_recommended, orient='index').reset_index()
+
+top10_recommended = most_recommended.sort_values(by=0,axis=0,ascending=False).head(10) #only 2 of the 10
+top10
+
+
+
+# How good is our model overall? Using precision
+
+# take the top 10 recommended songs 
+
+recommendations = top_10_per_user[0].apply(pd.Series)
+recommendations.reset_index(inplace=True)
+recommendations = recommendations.melt(id_vars='index', var_name='song_id', value_name='rating')
+
+
+# classify the rated songs into 1 if they rated it 4 or 5, 0 if below
 
 new_star = star.reset_index()
-
 melted_data = new_star.melt(id_vars='index', var_name='song_id', value_name='rating')
+actuals_only = melted_data.dropna(subset=['rating'])
+actuals_only = melted_data.dropna()
+actuals_only['relevant'] = actuals_only['rating'].isin([4,5]).astype(int)
 
-#melted_data1 = new_star.melt(id_vars='index', var_name='song_id', value_name='rating')
+# find the # of relevant items divided by N items with real rating data
 
-# Create a reader object specifying the rating scale
-reader = Reader(rating_scale=(1, 5))
+# merge the two dataframes
+merged_df = pd.merge(recommendations, actuals_only, on=['index', 'song_id'])
 
-# Load the data into Surprise's Dataset object
-melted_data = Dataset.load_from_df(melted_data[['index', 'song_id', 'rating']], reader)
+relevant_songs_count = merged_df.groupby('index')['relevant'].sum()
 
-# Split the data into train and test sets
-trainset, testset = train_test_split(melted_data, test_size=0.2,random_state=rseed)  # You can adjust the test_size
-
-# Choose an algorithm (SVD as an example)
-algorithm = SVD()
-
-# Train the algorithm on the training set
-algorithm.fit(trainset)
-
-# Predict ratings for the test set
-predictions = algorithm.test(testset)
-
-# Example: Get top N recommendations for a user
-# Replace 'user_id' with the actual user ID
-index = '1'  # Example user ID
-n_recommendations = 10  # Number of recommendations to get
-user_items = melted_data.build_full_trainset().ur[index]  # Get the items the user has rated
-user_unseen_items = [item for item in trainset.all_items() if item not in user_items]
-user_unseen_ratings = [algorithm.predict(index, item).est for item in user_unseen_items]
-top_n = sorted(zip(user_unseen_items, user_unseen_ratings), key=lambda x: x[1], reverse=True)[:n_recommendations]
-
-# 'top_n' contains the top N recommendations for the user with predicted ratings
-print(top_n)
-
-predictions[:5]
-
+#precision
+relevant_songs_count.sum()/merged_df.shape[0]  # 0.31591519856673633
