@@ -42,7 +42,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import Perceptron
 import torch
 import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader, random_split
+
 from IPython import display
 
 
@@ -523,7 +524,7 @@ metrics.RocCurveDisplay.from_predictions(
         color="darkorange",
     )
 ROC_AUC = roc_auc_score(y_test,pred)
-plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--',label='ROC curve (area = %0.2f)' % ROC_AUC)
+plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
 plt.axis("square")
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
@@ -601,13 +602,6 @@ train_data, test_data = random_split(data, [train_size, test_size])
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
-model_deep = nn.Sequential(
-    nn.Linear(D, H),
-    nn.Linear(H,H),
-    nn.Linear(H, C)
-)
-print(model_deep)
-
 def auc_score(model):    
     y_pred = model(X_test)
     y_pred_proba = torch.sigmoid(y_pred)
@@ -675,6 +669,13 @@ for x, y in test_data:
 
 X_test = torch.stack(X_test)
 y_test = torch.stack(y_test)
+
+model_deep = nn.Sequential(
+    nn.Linear(D, H),
+    nn.Linear(H,H),
+    nn.Linear(H, C)
+)
+print(model_deep)
 
 train_val(model_deep) #this also generate a graph for the train and val curves
 auc_score(model_deep) #0.806317016044464
