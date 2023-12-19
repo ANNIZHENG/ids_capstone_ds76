@@ -1,8 +1,3 @@
-# coding: utf-8
-
-# In[1]:
-
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -49,7 +44,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from IPython import display
-# In[2]:
 
 
 """ load data """
@@ -59,10 +53,6 @@ star = pd.read_csv('starRatings.csv', header=None)
 
 # spotify.head()
 # star.head()
-
-
-# In[3]:
-
 
 """
 convert data to proper types (numeric, boolean...)
@@ -93,9 +83,6 @@ spotify['time_signature'] = pd.to_numeric(spotify['time_signature'], errors='coe
 star = star.apply(pd.to_numeric, errors='coerce')
 
 
-# In[4]:
-
-
 """ row-wise removal overall """
 
 # spotify = spotify.dropna()
@@ -119,9 +106,6 @@ star = star.apply(pd.to_numeric, errors='coerce')
 # star = star.fillna(star.mean()) # impute nan values with average ratings of songs
 
 # star = star.fillna(star.mean(axis=1)) # impute nan values with average ratings of users to all songs
-
-
-# In[5]:
 
 
 """ 1) Is there a relationship between song length and popularity of a song? """
@@ -197,9 +181,6 @@ elif (linear_reg.coef_ < 0):
     print("Since the coef is {}, the relationship is negative".format(linear_reg.coef_))
 
 
-# In[6]:
-
-
 """ 2) Are explicitly rated songs more popular than songs that are not explicit? """
 
 """ 2.1) Data cleaning with row-wise removal """
@@ -268,9 +249,6 @@ else:
     print("Explicitly rated songs might not be more popular than songs that are not explicit.")
 
 
-# In[7]:
-
-
 """ 3) Are songs in major key more popular than songs in minor key? """
 
 """ 3.1) Data cleaning with row-wise removal """
@@ -315,9 +293,6 @@ if (popularity_mean_minor > popularity_mean_major):
     print("Minor songs might be more popular.")
 else:
     print("Minor song might NOT be more popular.")
-
-
-# In[8]:
 
 
 """
@@ -372,16 +347,6 @@ plt.legend()
 plt.show()
 
 
-# In[9]:
-
-
-question5_df = spotify[['popularity', 'duration', 'danceability', 'energy', 'loudness', 'speechiness', 
-                        'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo']].dropna()
-
-
-# In[10]:
-
-
 """
 5) Building a model that uses *all* of the song features mentioned in question 4 
 ('question 1' is a type according to the Discord chat), how well can you predict popularity? 
@@ -406,7 +371,7 @@ linear_reg_multi.fit(input_train, output_train)
 output_pred = linear_reg_multi.predict(input_test)
 
 """
-5.2) Compare using RMSE
+5.2) Calculate RMSE of the above multiple linear regression model and draw graph
 """
 
 rmse_multi = np.sqrt(mean_squared_error(output_test, output_pred)) # 21.17348602780182
@@ -426,31 +391,30 @@ lasso_regressor = lasso_regressor.fit(input_train, output_train)
 output_pred_lasso = ridge_regressor.predict(input_test)
 
 """
-5.4) Compare using RMSE
+5.4) Calulate RMSE of the above regularized model
 """
 
 rmse_ridge = np.sqrt(mean_squared_error(output_test, output_pred_ridge)) # 21.066651915961
 rmse_lasso = np.sqrt(mean_squared_error(output_test, output_pred_lasso)) # 21.066651915961
 
 """
-5.5) How do you account for this? 
-    Greater data dimension -> more specified the model in prediction
+5.5) Compare q4 and q5 RMSEs in a table
 """
 
+features.append("Multiple Predictors")
+features.append("Multiple Predictors with Ridge Regression")
+features.append("Multiple Predictors with Lasso Regression")
 
-# In[11]:
+rmse.append(rmse_multi)
+rmse.append(rmse_ridge)
+rmse.append(rmse_lasso)
 
+display(pd.DataFrame({'Predictors': features, 'RMSE': rmse}).sort_values(by='RMSE', ascending=True))
 
-# HAPPY LITTLE ACCIDENTS
-
-# inter-individyal variability check using range
-# (star.max(axis=1, skipna=True) - star.min(axis=1, skipna=True)).sort_values(ascending=True) 
-
-# ratings = star.mean() # use the mean rating of each movie
-
-# ANOVA
-# statistic, pvalue = stats.f_oneway(question2_df[question2_df['Explicity']==True]['Popularity'], 
-#                               question2_df[question2_df['Explicity'] == False]['Popularity'])
+"""
+5.6) How do you account for this? 
+    Greater data dimension -> more specified the model in prediction
+"""
 
 
 #%%
