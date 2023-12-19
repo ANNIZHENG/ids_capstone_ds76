@@ -141,7 +141,7 @@ How many groups are compared in the design?
 Compare medians or shapes of distributions?
     Medians is reasonable
 
---> Mann Whiteney U Test
+--> Mann Whitney U Test
 
 Null hypothesis: there is no relationship between song length and popularity of a song
 
