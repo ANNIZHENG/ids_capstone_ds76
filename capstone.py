@@ -575,14 +575,6 @@ for i, k in zip(labels, encoded_labels):
     print(f'{i}:{k}')
 y = encoder.fit_transform(spotify['track_genre'])
 
-#building the model and setting the metrics
-torch.manual_seed(seed)
-N = 1000  # num_samples_per_class
-D = x.shape[1]  # dimensions
-C = 52  # num_classes
-H = 100  # num_hidden_units
-batch_size = 32
-
 X_tensor = torch.from_numpy(x.values)
 X_tensor = X_tensor.type(torch.FloatTensor)
 y_tensor = torch.from_numpy(y)
@@ -596,6 +588,14 @@ train_data, test_data = random_split(data, [train_size, test_size])
 
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+
+#building the model and setting the metrics
+torch.manual_seed(seed)
+N = 1000  # num_samples_per_class
+D = x.shape[1]  # dimensions
+C = 52  # num_classes
+H = 100  # num_hidden_units
+batch_size = 32
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 learning_rate = 0.001
