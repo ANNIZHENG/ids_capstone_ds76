@@ -935,7 +935,7 @@ with the number of beats per measure, something with the key, or something with 
 
 """ Is there a relationship between key and popularity of a song? If so, is it positive or negative? """
 
-""" 1.1) Retrive Data """
+""" Retrive Data """
 
 popularity_english = []
 capital_num = []
@@ -967,7 +967,7 @@ plt.title('Scatter Plot of Number of Capital Letters in Album Name and Popularit
 plt.show()
 
 
-""" 1.2) Use ANOVA after grouping songs based on the number of capital letters its album name has """
+""" Use ANOVA after grouping songs based on the number of capital letters its album name has """
 
 """ Null Hypothesis: there is no relationship """
 
