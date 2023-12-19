@@ -927,3 +927,53 @@ print((1017789+979313)/4996173) # 39% of ratings are 3 or 4 in the actual data
 relevant_songs_count.sum()/merged_df.shape[0]  # 0.5435453369164925
 print(relevant_songs_count.sum()/merged_df.shape[0])
 
+"""
+Extra Credit) Tell us something interesting about this dataset that is not trivial and not already 
+part of an answer (implied or explicitly) to these enumerated questions [Suggestion: Do something 
+with the number of beats per measure, something with the key, or something with the song or album titles]
+"""
+
+""" Is there a relationship between key and popularity of a song? If so, is it positive or negative? """
+
+""" 1.1) Retrive Data """
+
+popularity_english = []
+capital_num = []
+
+for i in range(len(spotify['album_name'])):
+    # cite: https://stackoverflow.com/questions/18129830/count-the-uppercase-letters-in-a-string-with-python
+    cap_num = sum(1 for c in spotify['album_name'][i] if c.isupper())
+    
+    if (cap_num > 0):
+        popularity_english.append(spotify['popularity'][i])
+        capital_num.append(cap_num)
+        
+extra_df = pd.DataFrame({'Number of Capital Letters': capital_num, 'Popularity': popularity_english})
+
+sort_extra_df = {}
+
+cap_num_unique = extra_df['Number of Capital Letters'].unique()
+
+for i in range(len(cap_num_unique)):
+    sort_extra_df[cap_num_unique[i]] = extra_df['Popularity'][extra_df['Number of Capital Letters'] == cap_num_unique[0]]
+    
+# sort_extra_df.keys() # number of capital letters
+# sort_extra_df.values() # corresponding popularities
+
+plt.scatter(extra_df['Number of Capital Letters'], extra_df['Popularity'])
+plt.xlabel('Number of Capital Letters in Album Name')
+plt.ylabel('Popularity')
+plt.title('Scatter Plot of Number of Capital Letters in Album Name and Popularity')
+plt.show()
+
+
+""" 1.2) Use ANOVA after grouping songs based on the number of capital letters its album name has """
+
+""" Null Hypothesis: there is no relationship """
+
+statistic, pvalue = stats.f_oneway(*sort_extra_df.values()) ### for unpacking lists from dictionary
+
+if pvalue > alpha:
+    print("""Cannot reject the null hypothesis, for p-value being {}, which is a lot larger than alpha value 0.05.""".format(pvalue))
+else:
+    print("""Reject the null hypothesis, for p-value being {}, which is smaller than alpha value 0.05.""".format(pvalue))
