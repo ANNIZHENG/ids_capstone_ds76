@@ -764,8 +764,6 @@ top10 = popularity.sort_values(ascending=False).head(10)
 """
 rseed = 18412460
 
-#ministar = star.iloc[:100,:10]
-
 ratings_matrix = np.array(star)
 
 # Number of latent factors
@@ -778,12 +776,12 @@ item_matrix = np.random.rand(num_items, k)
 
 # Hyperparameters
 learning_rate = 0.01
-num_epochs = 500
+num_epochs = 380
 
 batch_size = 100
 num_batches = int(np.ceil(num_users / batch_size))
 
-# Convert NaN to zero for calculations (if needed)
+# Convert NaN to zero for calculations
 ratings_matrix_zero = np.nan_to_num(ratings_matrix, nan=0)
 
 for epoch in range(num_epochs):
@@ -795,7 +793,7 @@ for epoch in range(num_epochs):
         batch_users = range(start_idx, end_idx)
 
         for i in batch_users:
-            print(f"User: {i} in batch {batch_idx} in epoch {epoch}")
+            #print(f"User: {i} in batch {batch_idx} in epoch {epoch}")
             for j in range(num_items):
                 if not np.isnan(ratings_matrix[i, j]):  # Exclude NaN values for calculations
                     error = ratings_matrix_zero[i, j] - np.dot(user_matrix[i, :], item_matrix[j, :])
@@ -803,13 +801,12 @@ for epoch in range(num_epochs):
                     item_gradient = 2 * (error * user_matrix[i, :]) - 0.01 * item_matrix[j, :]
                     user_matrix[i, :] += learning_rate * user_gradient
                     item_matrix[j, :] += learning_rate * item_gradient
-
          
 # Predict ratings using the learned matrices
-predicted_ratings200 = np.dot(user_matrix, item_matrix.T)
+predicted_ratings380ep = np.dot(user_matrix, item_matrix.T)
 
 # convert to df
-predicted_df = pd.DataFrame(predicted_ratings200)
+predicted_df = pd.DataFrame(predicted_ratings380ep)
 
 # find top 10 per user
 top_10_per_user = predicted_df.apply(lambda row: row.nlargest(10).index.tolist(), axis=1)
@@ -823,10 +820,8 @@ most_recommended = Counter(top_10_per_user[0].explode())
 
 most_recommended = pd.DataFrame.from_dict(most_recommended, orient='index').reset_index()
 
-top10_recommended = most_recommended.sort_values(by=0,axis=0,ascending=False).head(10) #only 2 of the 10
-top10
-
-
+top10_recommended = most_recommended.sort_values(by=0,axis=0,ascending=False).head(10) 
+top10 # only 2003 and 3003 show up, 2/10 most popular songs
 
 # How good is our model overall? Using precision
 
@@ -843,7 +838,7 @@ new_star = star.reset_index()
 melted_data = new_star.melt(id_vars='index', var_name='song_id', value_name='rating')
 actuals_only = melted_data.dropna(subset=['rating'])
 actuals_only = melted_data.dropna()
-actuals_only['relevant'] = actuals_only['rating'].isin([4,5]).astype(int)
+actuals_only['relevant'] = actuals_only['rating'].isin([3,4]).astype(int)
 
 # find the # of relevant items divided by N items with real rating data
 
@@ -853,4 +848,8 @@ merged_df = pd.merge(recommendations, actuals_only, on=['index', 'song_id'])
 relevant_songs_count = merged_df.groupby('index')['relevant'].sum()
 
 #precision
-relevant_songs_count.sum()/merged_df.shape[0]  # 0.31591519856673633
+relevant_songs_count.sum()/merged_df.shape[0]  # 0.5435453369164925
+
+actuals_only['rating'].value_counts()
+print((1017789+979313)/4996173) # 39%
+
