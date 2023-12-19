@@ -319,7 +319,8 @@ for f in features:
     """
     input_train, input_test, output_train, output_test = train_test_split(spotify[[f]], 
                                                                           spotify['popularity'], 
-                                                                          test_size=0.20)
+                                                                          test_size=0.20,
+                                                                          random_state=seed)
     linear_reg.fit(input_train, output_train)
     linear_reg_values.append([linear_reg.coef_, linear_reg.intercept_])
     output_pred = linear_reg.predict(input_test)
@@ -361,7 +362,8 @@ question5_df = spotify[['popularity', 'duration', 'danceability', 'energy', 'lou
 
 input_train, input_test, output_train, output_test = train_test_split(question5_df[features], 
                                                                       question5_df['popularity'], 
-                                                                      test_size=0.20)
+                                                                      test_size=0.20,
+                                                                      random_state=seed)
 
 """
 5.1) Build multiple linear regression based on features
