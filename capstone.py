@@ -715,7 +715,7 @@ y_test = torch.stack(y_test)
 train_val(model_deep) #this also generate a graph for the train and val curves
 auc_score(model_deep) #0.806317016044464
 
-
+#%%
 
 """
 9) In recommender systems, the popularity based model is an important baseline. We have a 
@@ -744,7 +744,10 @@ r2 = reg.score(x, y) #0.324
 #0.324, meaning that the popularity of a song explains 32.4% of the variation in the star rating
 
 #plot
+x_range = np.linspace(x.min(), x.max(), 100).reshape(-1, 1)
+y_pred = reg.predict(x_range)
 plt.scatter(x, y)
+plt.plot(x_range, y_pred, color='red', label='Fitted Line')
 plt.xlabel('Popularity')
 plt.ylabel('Rating')
 plt.title('Scatter Plot of Popularity and Rating')
@@ -753,7 +756,12 @@ plt.show()
 ######### Part B
 
 # find the 10 most popular songs - these are the "greatest hits"
-top10 = popularity.sort_values(ascending=False).head(10)
+
+#top10 by popularity
+top10_popularity = popularity.sort_values(ascending=False).head(10)
+
+#top10 by rating
+top10_rated = star_rating.sort_values(ascending=False).head(10)
 
 #%%
 """
@@ -762,8 +770,106 @@ top10 = popularity.sort_values(ascending=False).head(10)
     a given user will enjoy most. How do these recommendations compare to the “greatest hits” 
     from the previous question and how good is your recommender system in making recommendations?
 """
-rseed = 18412460
+ratings_matrix = np.array(star)
 
+# Number of latent factors
+k = 2
+
+# Initialize user and item matrices randomly
+num_users, num_items = ratings_matrix.shape
+user_matrix = np.random.rand(num_users, k)
+item_matrix = np.random.rand(num_items, k)
+
+# Hyperparameters
+learning_rate = 0.01
+num_epochs = 380
+
+batch_size = 100
+num_batches = int(np.ceil(num_users / batch_size))
+
+# Convert NaN to zero for calculations
+ratings_matrix_zero = np.nan_to_num(ratings_matrix, nan=0)
+
+for epoch in range(num_epochs):
+    #print(f"Epoch: {epoch}")  # Print current epoch number
+    for batch_idx in range(num_batches):
+        #print(f"Batch: {batch_idx} in epoch {epoch}")
+        start_idx = batch_idx * batch_size
+        end_idx = min((batch_idx + 1) * batch_size, num_users)
+        batch_users = range(start_idx, end_idx)
+
+        for i in batch_users:
+            #print(f"User: {i} in batch {batch_idx} in epoch {epoch}")
+            for j in range(num_items):
+                if not np.isnan(ratings_matrix[i, j]):  # Exclude NaN values for calculations
+                    error = ratings_matrix_zero[i, j] - np.dot(user_matrix[i, :], item_matrix[j, :])
+                    user_gradient = 2 * (error * item_matrix[j, :]) - 0.01 * user_matrix[i, :]
+                    item_gradient = 2 * (error * user_matrix[i, :]) - 0.01 * item_matrix[j, :]
+                    user_matrix[i, :] += learning_rate * user_gradient
+                    item_matrix[j, :] += learning_rate * item_gradient
+         
+# Predict ratings using the learned matrices
+predicted_ratings380ep = np.dot(user_matrix, item_matrix.T)
+
+# convert to df
+predicted_df = pd.DataFrame(predicted_ratings380ep)
+
+# find top 10 per user for songs they haven't rated
+
+#melt predicted values
+new_predicted = predicted_df.reset_index()
+predicted_melt = new_predicted.melt(id_vars='index', var_name='song_id', value_name='rating')
+predicted_melt.head()
+
+#melt actuals
+new_star = star.reset_index()
+melted_data = new_star.melt(id_vars='index', var_name='song_id', value_name='rating')
+actuals_only = melted_data.dropna(subset=['rating'])
+actuals_only = melted_data.dropna()
+
+# left join
+merge1 = pd.merge(predicted_melt, actuals_only, on=['index', 'song_id'], how='left', indicator=True)
+merge1 = merge1[merge1['_merge'] == 'left_only'].drop(columns=['_merge'])
+
+# find the top 10
+def top_10_songs(group):
+    return group.nlargest(10, 'rating_x')
+
+top_10_by_user1 = merge1.groupby('index').apply(top_10_songs).reset_index(drop=True)
+
+
+# How do our recommendations compare to greatest hits?
+# only 2003 and 3003 show up, 2/10 most popular songs
+top_10_by_user1['song_id'].value_counts().nlargest(10)
+top10_popularity 
+
+
+# How good is our model overall? Using precision
+
+# find all the top 10 songs, regardless of whether or not they are rated
+
+top_10_per_user = predicted_df.apply(lambda row: row.nlargest(10).index.tolist(), axis=1)
+top_10_per_user = pd.DataFrame(top_10_per_user)
+recommendations = top_10_per_user[0].apply(pd.Series)
+recommendations.reset_index(inplace=True)
+recommendations = recommendations.melt(id_vars='index', var_name='song_id', value_name='rating')
+
+# classify the rated songs into 1 if they rated it 3 or 4, 0 if below
+actuals_only['relevant'] = actuals_only['rating'].isin([3,4]).astype(int)
+actuals_only.head()
+
+# find the # of relevant items divided by N items with real rating data
+#merge the two dataframes
+
+merged_df = pd.merge(recommendations, actuals_only, on=['index', 'song_id'])
+
+relevant_songs_count = merged_df.groupby('index')['relevant'].sum()
+
+#precision
+relevant_songs_count.sum()/merged_df.shape[0]  # 0.5435453369164925
+
+actuals_only['rating'].value_counts()
+print((1017789+979313)/4996173) # 39%
 ratings_matrix = np.array(star)
 
 # Number of latent factors
@@ -848,8 +954,9 @@ merged_df = pd.merge(recommendations, actuals_only, on=['index', 'song_id'])
 relevant_songs_count = merged_df.groupby('index')['relevant'].sum()
 
 #precision
-relevant_songs_count.sum()/merged_df.shape[0]  # 0.5435453369164925
-
 actuals_only['rating'].value_counts()
-print((1017789+979313)/4996173) # 39%
+print((1017789+979313)/4996173) # 39% of ratings are 3 or 4 in the actual data
+
+relevant_songs_count.sum()/merged_df.shape[0]  # 0.5435453369164925
+print(relevant_songs_count.sum()/merged_df.shape[0])
 
