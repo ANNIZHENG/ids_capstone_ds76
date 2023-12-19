@@ -652,7 +652,7 @@ def train_val(model):
         val_loss.append(epoch_loss)
         
         if (epoch+1) % 10 == 0:
-            print(f'[EPOCH]: {epoch}, [TRAIN LOSS]: {train_losses[-1]:.3f}, [VAL LOSS]: {val_losses[-1]:.3f}, [ACCURACY]: {acc:.3f}')
+            print(f'[EPOCH]: {epoch}, [TRAIN LOSS]: {train_loss[-1]:.3f}, [VAL LOSS]: {val_loss[-1]:.3f}, [ACCURACY]: {acc:.3f}')
         #display.clear_output(wait=True)
         
     plt.figure(figsize=(10, 5))
