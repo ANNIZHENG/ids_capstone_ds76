@@ -933,7 +933,7 @@ part of an answer (implied or explicitly) to these enumerated questions [Suggest
 with the number of beats per measure, something with the key, or something with the song or album titles]
 """
 
-""" Is there a relationship between key and popularity of a song? If so, is it positive or negative? """
+""" Is there a relationship between album name's number of capital letters and popularity? """
 
 """ Retrive Data """
 
