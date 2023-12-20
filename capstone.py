@@ -186,8 +186,8 @@ elif (linear_reg.coef_ < 0):
 
 """ 2.1) Data cleaning with row-wise removal """
 
-explicit = spotify['explicit'].head(5000) # since the star data only has ratings of the first 5k song
-popularity = spotify['popularity'].head(5000)
+explicit = spotify['explicit']
+popularity = spotify['popularity']
 question2_df = pd.DataFrame({'Popularity': popularity, 'Explicity': explicit})
 question2_df = question2_df.dropna() # row-wise removal
 
@@ -254,8 +254,8 @@ else:
 
 """ 3.1) Data cleaning with row-wise removal """
 
-mode = spotify['mode'].head(5000)
-popularity = spotify['popularity'].head(5000)
+mode = spotify['mode']
+popularity = spotify['popularity']
 question3_df = pd.DataFrame({'Popularity': popularity, 'Mode': mode})
 question3_df = question3_df.dropna() # row-wise removal
 
