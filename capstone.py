@@ -331,20 +331,20 @@ for f in features:
 display(pd.DataFrame({'Feature': features, 'RMSE': rmse}).sort_values(by='RMSE', ascending=True))
 
 """
-4.4) Inspecting the RMSE table, one may realize that loudness has the lowest the RMSE. 
+4.4) Inspecting the RMSE table, one may realize that instrumentalness has the lowest the RMSE. 
 
-Here is a graph of how linear regression line predicts the loudness data
+Here is a graph of how linear regression line predicts the popularity data
 """
 
-random_x = np.linspace(spotify['loudness'].min(), spotify['loudness'].max(), 100)
+random_x = np.linspace(spotify['instrumentalness'].min(), spotify['instrumentalness'].max(), 100)
 linear_reg_line = linear_reg_values[3][0] * random_x + linear_reg_values[3][1]
 
-plt.scatter(spotify['loudness'], spotify['popularity'])
+plt.scatter(spotify['instrumentalness'], spotify['popularity'])
 plt.plot(random_x, linear_reg_line, color='red', label='Linear Regression Line')
 plt.ylim(0, 100)
-plt.xlabel('Loudness')
+plt.xlabel('Instrumentalness')
 plt.ylabel('Popularity')
-plt.title('Loudness and Popularity Data with Linear Regression Line')
+plt.title('Instrumentalness and Popularity Data with Linear Regression Line')
 plt.legend()
 plt.show()
 
